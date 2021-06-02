@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/text/encoding/unicode"
 
 	"github.com/authelia/authelia/internal/configuration/schema"
 	"github.com/authelia/authelia/internal/logging"
@@ -288,9 +289,20 @@ func (p *LDAPUserProvider) UpdatePassword(inputUsername string, newPassword stri
 		return fmt.Errorf("Unable to update password. Cause: %s", err)
 	}
 
-	modifyRequest := ldap.NewPasswordModifyRequest(profile.DN, "", newPassword)
+	modifyRequest := ldap.NewModifyRequest(profile.DN, nil)
 
-	_, err = conn.PasswordModify(modifyRequest)
+	switch p.configuration.Implementation {
+	case schema.LDAPImplementationActiveDirectory:
+		utf16 := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
+		// The password needs to be enclosed in quotes
+		// https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-adts/6e803168-f140-4d23-b2d3-c3a8ab5917d2
+		pwdEncoded, _ := utf16.NewEncoder().String(fmt.Sprintf("\"%s\"", newPassword))
+		modifyRequest.Replace("unicodePwd", []string{pwdEncoded})
+	default:
+		modifyRequest.Replace("userPassword", []string{newPassword})
+	}
+
+	err = conn.Modify(modifyRequest)
 
 	if err != nil {
 		return fmt.Errorf("Unable to update password. Cause: %s", err)
