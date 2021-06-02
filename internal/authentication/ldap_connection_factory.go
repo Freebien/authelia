@@ -15,6 +15,7 @@ type LDAPConnection interface {
 
 	Search(searchRequest *ldap.SearchRequest) (*ldap.SearchResult, error)
 	Modify(modifyRequest *ldap.ModifyRequest) error
+	PasswordModify(modifyPasswordRequest *ldap.PasswordModifyRequest) (*ldap.PasswordModifyResult, error)
 	StartTLS(config *tls.Config) error
 }
 
@@ -46,6 +47,11 @@ func (lc *LDAPConnectionImpl) Search(searchRequest *ldap.SearchRequest) (*ldap.S
 // Modify modifies an ldap object.
 func (lc *LDAPConnectionImpl) Modify(modifyRequest *ldap.ModifyRequest) error {
 	return lc.conn.Modify(modifyRequest)
+}
+
+// PasswordModify modifies an ldap object's password.
+func (lc *LDAPConnectionImpl) PasswordModify(modifyRequest *ldap.PasswordModifyRequest) (*ldap.PasswordModifyResult, error) {
+	return lc.conn.PasswordModify(modifyRequest)
 }
 
 // StartTLS requests the LDAP server upgrades to TLS encryption.
